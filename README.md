@@ -185,3 +185,95 @@ powershell -ExecutionPolicy Bypass -File .\scripts\03-verify-routing.ps1
 ## 📜 Licencia
 
 Uso libre con fines educativos/portfolio. Voicemeeter y sus librerías son de [VB-Audio](https://vb-audio.com/); respeta su licencia para uso profesional.
+
+---
+
+## 🐧 Dual Audio Headphones en Linux (PipeWire/PulseAudio)
+
+Este mismo proyecto ahora también funciona en **Linux** con **PipeWire** o **PulseAudio** usando `module-combine-sink`. No necesitas Voicemeeter, con `pactl` es suficiente.
+
+### ¿Cómo funciona?
+
+Se crea un sink virtual llamado `dual-audio-combined` que mezcla dos salidas físicas al mismo tiempo. Al ponerlo como salida por defecto, todo el audio irá a ambos auriculares simultáneamente.
+
+### Requisitos
+
+- Linux con **PipeWire** o **PulseAudio**
+- `pactl` instalado (`pipewire-pulse` o `pulseaudio-utils`)
+- Dos salidas de audio conectadas al mismo tiempo
+
+### Ver salidas disponibles
+
+```bash
+pactl list sinks short
+```
+
+### ACTIVAR - Hacer que suenen los dos auriculares a la vez
+
+Tienes dos opciones desde el repositorio:
+
+```bash
+cd ~/dual-audio-headphones
+chmod +x scripts/dual-audio-linux-combine.sh scripts/combine-now.sh
+./scripts/dual-audio-linux-combine.sh
+# o
+./scripts/combine-now.sh
+```
+
+Esto hará lo siguiente:
+1. Creará el sink virtual `dual-audio-combined`
+2. Lo combinará con ambos auriculares
+3. Lo establecerá como salida por defecto
+4. Guardará el ID del módulo en `~/.local/state/dual-audio-module.id`
+
+### DESACTIVAR - Volver a usar solo un auricular
+
+**Opción 1: Con script local (si lo tienes configurado)**
+
+```bash
+~/.local/bin/dual-audio-restore.sh
+```
+
+**Opción 2: Manual con el ID guardado**
+
+```bash
+MODULE_ID=$(cat ~/.local/state/dual-audio-module.id 2>/dev/null)
+[ -n "$MODULE_ID" ] && pactl unload-module "$MODULE_ID"
+rm -f ~/.local/state/dual-audio-module.id
+pactl set-default-sink alsa_output.usb-Beibinghe_Technology_GAMING_HEADSET_GT808_433132353134352E-00.analog-stereo
+```
+
+**Opción 3: Elegir manualmente qué sink usar**
+
+```bash
+pactl list sinks short
+pactl set-default-sink NOMBRE_DEL_SINK_QUE_QUIERAS_USAR
+```
+
+### Comprobar que funciona
+
+1. Reproduce cualquier audio
+2. Debería escucharse en **ambos auriculares al mismo tiempo**
+3. Puedes verlo en `pavucontrol` → `Reproducción` (aparecerán las apps en `Dual Audio - Auriculares Combinados`)
+
+### Configuración actual (este equipo)
+
+En este sistema está configurado para combinar:
+
+- `alsa_output.usb-Beibinghe_Technology_GAMING_HEADSET_GT808_433132353134352E-00.analog-stereo` (GAMING HEADSET GT808)
+- `alsa_output.pci-0000_00_14.2.analog-stereo` (Audio Interno Estéreo analógico)
+
+### Notas para Linux
+
+- Funciona con **PipeWire** y **PulseAudio**
+- Si alguna app mantiene su salida antigua, cámbiala desde `pavucontrol`
+- Si desconectas un auricular, vuelve a ejecutar el script para recrear la combinación
+- Puedes activar autoinicio con `systemctl --user enable --now dual-audio.service`
+
+### Scripts para Linux
+
+| Archivo | Descripción |
+| --- | --- |
+| `scripts/combine-now.sh` | **ACTIVAR** - Combina los dos auriculares configurados |
+| `scripts/dual-audio-linux-combine.sh` | **ACTIVAR** - Misma función, nombre más descriptivo |
+
